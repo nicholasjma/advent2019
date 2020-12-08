@@ -2,12 +2,13 @@ from collections import deque
 
 
 class IntCode:
-    def __init__(self, filename, input=None, verbose=False):
-        if isinstance(filename, str):
-            with open(filename) as f:
+    """IntCode class for Advent of Code 2019"""
+    def __init__(self, data, input=None, verbose=False):
+        if isinstance(data, str):
+            with open(data) as f:
                 self.l = [int(x) for x in f.read().split(",")]
         else:
-            self.l = deepcopy(filename)
+            self.l = deepcopy(data)
         self.idx = 0
         if input is None:
             self.input = deque()
@@ -19,20 +20,24 @@ class IntCode:
         self.relative = 0
 
     def print(self, *s):
+        """Print method that checks for verbosity"""
         if self.verbose:
             print(*s)
 
     def process_code(self, code):
-        code, instruction = divmod(code, 100)
+        """Given instruction, return opcode and options"""
+        code, opcode = divmod(code, 100)
         options = [0] * 3
         for i in range(3):
             code, options[i] = divmod(code, 10)
-        return instruction, options
+        return opcode, options
 
     def expand(self, spec):
+        """Make tape bigger if needed, spec can be a slice or int"""
         if not isinstance(spec, slice):
             self.l.extend([0] * (spec - len(self) + 1))
         else:
+            # get the largest value in the slice
             m = max(
                 range(
                     spec.start if spec.start is not None else 0,
@@ -43,7 +48,7 @@ class IntCode:
             self.l.extend([0] * (m - len(self) + 1))
 
     def __setitem__(self, spec, value):
-        # expand array as needed
+        """Set value on tape, expanding as needed"""
         try:
             self.l[spec] = value
         except IndexError:
@@ -51,7 +56,7 @@ class IntCode:
             self.l[spec] = value
 
     def __getitem__(self, spec):
-        # expand array as needed
+        """Get value from tape, expanding as needed"""
         try:
             return self.l[spec]
         except IndexError:
@@ -59,21 +64,26 @@ class IntCode:
             return self.l[spec]
 
     def __len__(self):
+        """Returns length of the tape"""
         return len(self.l)
 
     def pop(self):
+        """Get the next instruction and move the current instruction pointer"""
         try:
             instruction, options = self.process_code(self.l[self.idx])
         except IndexError:
+            # we ran out of instructions
             raise StopIteration
         try:
             plen = self.LENGTH[instruction]
         except KeyError:
+            # bad instruction
             print(instruction, options)
             raise KeyError(instruction)
         params = self[self.idx + 1 : self.idx + plen]
         #         print("Raw instruction ", instruction, params, options)
         self.idx += plen
+        # update parameters by mode
         new_params = [
             self[x]
             if mode == 0
@@ -94,6 +104,7 @@ class IntCode:
         return instruction, new_params, self.idx - plen, self.l[self.idx - plen]
 
     def runinst(self):
+        """Run an instruction"""
         instruction, params, i, orig = self.pop()
         if instruction == 1:
             x, y, idx = params
@@ -140,10 +151,12 @@ class IntCode:
         else:
             raise ValueError("Invalid instruction:", instruction, params)
         if self[i] != orig:
+            # if we modified the opcide, don't advance current pointer
             self.idx -= self.LENGTH[instruction]
         return instruction
 
     def run_all(self):
+        """Run instructions until termination or input required"""
         while True:
             inst = self.runinst()
             if inst == 99:
@@ -152,15 +165,19 @@ class IntCode:
                 return -1
 
     def pop_input(self):
+        """Pop an input"""
         return self.input.popleft()
 
     def push_input(self, value):
+        """Push a new input"""
         self.input.append(value)
 
     def pop_output(self):
+        """Pop an output"""
         return self.output.popleft()
 
     def push_output(self, value):
+        """Push a new output"""
         self.output.append(value)
 
     POS = {1, 2, 3, 7, 8}

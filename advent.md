@@ -33,6 +33,7 @@ from math import inf
 mass = np.loadtxt("input1.txt", dtype=int)
 fuel = [mass // 3 - 2]
 while True:
+    # keep adding fuel needed to haul the fuel until nothing is added
     fuel.append(np.clip(fuel[-1] // 3 - 2, 0, None))
     if fuel[-1].max() == 0:
         break
@@ -125,6 +126,7 @@ DIRS = {
 
 ```python
 def get_pos(p):
+    """Return set of points visited"""
     s = set()
     cur = (0, 0)
     for direction, dist in p:
@@ -142,6 +144,7 @@ min(abs(x) + abs(y) for x, y in s1 & s2)
 
 ```python
 def get_pos_dict(p):
+    """Return dict with points visited as keys and earliest times visited as values"""
     s = {}
     cur = (0, 0)
     steps = 0
@@ -214,12 +217,15 @@ for x, y in orbits:
 
 
 def compute_indirect(direct):
+    """Compute indirect orbits"""
     prev, indirect = deepcopy(direct), deepcopy(direct)
     while True:
         for orbited, orbits in prev.items():
             if not orbits:
                 continue
+            # add all indirect orbits found to indirect
             indirect[orbited] |= set.union(*(indirect[x] for x in orbits))
+        # keep looping until we didn't add anything
         if indirect == prev:
             return indirect
         else:
@@ -234,12 +240,14 @@ sum(map(len, indirect.values()))
 with open("input6.txt") as f:
     orbits = [tuple(x.split(")")) for x in f.read().splitlines()]
 graph = defaultdict(set)
+# create adjacency dict
 for x, y in orbits:
     graph[y].add(x)
     graph[x].add(y)
 
 
 def min_dist(graph, source, dest):
+    """Use Djikstra's algorithm to find the min distance from source to dest"""
     dists = defaultdict(lambda: inf)
     dists[source] = 0
     unvisited = set(graph.keys())
@@ -261,6 +269,7 @@ min_dist(graph, "YOU", "SAN") - 2
 
 ```python
 def amp(data):
+    """Part 1"""
     best = 0
     for phases in permutations(range(5)):
         signal = 0
@@ -277,14 +286,20 @@ amp("input7.txt")
 
 ```python
 def feedback(data, verbose=False):
+    """Part 2"""
     best = 0
     for phases in permutations(range(5, 10)):
         signal = 0
+        # initialize amps with proper phases
         amps = [IntCode(data, input=[phase], verbose=False) for phase in phases]
         for amp in cycle(amps):
+            # push previous signal as input
             amp.push_input(signal)
+            # run until either waiting for input or halted
             amp.run_all()
+            # update current signal
             signal = amp.pop_output()
+            # stop amplifying if the last amp halted
             if amp.halt and amp is amps[-1]:
                 best = max(best, signal)
                 if verbose:
@@ -300,7 +315,7 @@ feedback("input7.txt", verbose=False)
 
 ```python
 with open("input8.txt") as f:
-    s = f.read()[:-1]
+    s = f.read()[:-1]  # strip the terminal newline
 WIDTH = 25
 HEIGHT = 6
 imgs = [s[idx : idx + WIDTH * HEIGHT] for idx in range(0, len(s), WIDTH * HEIGHT)]
@@ -314,6 +329,7 @@ img["1"] * img["2"]
 
 ```python
 def first_pixel(l):
+    """outputs the first entry that isn't 2"""
     for c in l:
         if c != "2":
             return c
@@ -321,16 +337,19 @@ def first_pixel(l):
 
 def print_img(img, lpad=2, rpad=1, tpad=1, bpad=1, white=" ", black=None, padcolor=0):
     if black is None:
-        black = bytes((219,)).decode("cp437")
+        black = bytes((219,)).decode("cp437")  # a black block character
     PAD = black if padcolor == 0 else wheite
+    # print top padding
     for _ in range(tpad):
         print(PAD * (WIDTH + lpad + rpad))
+    # print each row with left and right padding added
     for idx in range(0, WIDTH * HEIGHT, WIDTH):
         print(
             PAD * lpad
             + "".join(img[idx : idx + WIDTH]).replace("1", white).replace("0", black)
             + PAD * rpad
         )
+    # print bottom padding
     for _ in range(bpad):
         print(PAD * (WIDTH + lpad + rpad))
 ```
